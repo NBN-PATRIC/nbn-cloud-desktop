@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NBN Cloud: instalador MSI (WiX 5).
+
+  Instalação silenciosa com o servidor da empresa já sugerido:
+    msiexec /i NBNCloud-<versão>-x64.msi SERVERURL=https://klcloud.nbntelecom.com.br /qn
+
+  SERVERURL é gravado em HKLM\Software\NBN Telecom\NBN Cloud\ServerUrl e só PREENCHE a primeira
+  tela do assistente (o usuário pode trocar e pode ter contas em mais de um servidor).
+  Sem SERVERURL o cliente sugere https://cloud.nbntelecom.com.br.
+  Numa atualização sem SERVERURL, o valor gravado antes é mantido.
+
+  Variáveis (passadas pelo build-msi.ps1):
+    Version     versão do produto (ex.: 6.0.3.12; o MSI compara só os três primeiros campos)
+    SourceDir   pasta com o pacote portátil do Craft (bin\nbncloud.exe e dependências)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="NBN Cloud"
+           Manufacturer="NBN Telecom"
+           Version="$(var.Version)"
+           UpgradeCode="C123366B-06DA-47A2-85A8-E0DBF14C4E25"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="NBN Cloud: sincronização de arquivos da NBN Telecom" />
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="Uma versão mais nova do NBN Cloud já está instalada." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- SERVERURL: vem da linha de comando; numa atualização sem ele, recupera o que estava gravado.
+         A busca vai para outra propriedade para não sobrescrever um SERVERURL novo da linha de comando. -->
+    <Property Id="SERVERURL" Secure="yes" />
+    <Property Id="SERVERURL_SALVO" Secure="yes">
+      <RegistrySearch Id="ServerUrlAnterior" Root="HKLM" Key="Software\NBN Telecom\NBN Cloud"
+                      Name="ServerUrl" Type="raw" Bitness="always64" />
+    </Property>
+    <SetProperty Id="SERVERURL" Value="[SERVERURL_SALVO]" After="AppSearch" Sequence="both"
+                 Condition="NOT SERVERURL AND SERVERURL_SALVO" />
+
+    <Icon Id="nbncloud.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="nbncloud.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.nbntelecom.com.br" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/NBN-PATRIC/nbn-cloud-desktop" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="NBN Cloud" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Principal" Title="NBN Cloud" Level="1">
+      <!-- todos os arquivos do pacote portátil do Craft -->
+      <Files Directory="INSTALLFOLDER" Include="$(var.SourceDir)\**" />
+
+      <Component Id="AtalhoMenuIniciar" Directory="ProgramMenuFolder" Guid="5A7C2E61-3B4D-4F8E-9C1A-7D2B6E0F4A13">
+        <Shortcut Id="AtalhoNbnCloud" Name="NBN Cloud" Description="Sincronização de arquivos da NBN Telecom"
+                  Target="[INSTALLFOLDER]bin\nbncloud.exe" WorkingDirectory="INSTALLFOLDER" Icon="nbncloud.ico" />
+        <RegistryValue Root="HKLM" Key="Software\NBN Telecom\NBN Cloud\Instalador" Name="AtalhoMenu"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ServidorSugerido" Directory="INSTALLFOLDER" Guid="8E1F4B27-6C3A-4D59-A2E7-1F9C0B5D3E68"
+                 Condition="SERVERURL">
+        <RegistryValue Root="HKLM" Key="Software\NBN Telecom\NBN Cloud" Name="ServerUrl"
+                       Type="string" Value="[SERVERURL]" KeyPath="yes" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

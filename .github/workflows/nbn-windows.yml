@@ -31,6 +31,10 @@ jobs:
     env:
       CRAFT_TARGET: windows-cl-msvc2022-x86_64
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # lidos pela receita do Craft (owncloud-client.py) para achar o executável da marca
+      APPLICATION_EXECUTABLE: nbncloud
+      APPLICATION_SHORTNAME: NBNCloud
+      NBN_BUILD: ${{ github.run_number }}
 
     steps:
     - name: Check out
@@ -62,7 +66,7 @@ jobs:
       run: |
         New-Item -ItemType Directory "${env:GITHUB_WORKSPACE}/binaries/"
         & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
-        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c dev-utils/nsis
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set buildNumber="${env:NBN_BUILD}" owncloud/owncloud-client
 
     - name: Install dependencies
       run: |
@@ -80,6 +84,20 @@ jobs:
       run: |
         Copy-Item "$env:HOME/craft/binaries/*" "${env:GITHUB_WORKSPACE}/binaries/" -ErrorAction SilentlyContinue
         Get-ChildItem "${env:GITHUB_WORKSPACE}/binaries/" | Format-Table Name, Length
+
+    - name: MSI
+      run: |
+        python -m pip install --quiet pillow==11.3.0
+        $pacote = Get-ChildItem "${env:GITHUB_WORKSPACE}/binaries/" -Include *.7z, *.zip -Recurse | Select-Object -First 1
+        if (-not $pacote) { throw "pacote portátil do Craft não encontrado" }
+        $dest = Join-Path $env:RUNNER_TEMP 'portatil'
+        7z x $pacote.FullName "-o$dest" -y | Out-Null
+        # o pacote pode vir com uma pasta raiz; acha onde está bin/nbncloud.exe
+        $exe = Get-ChildItem $dest -Recurse -Filter nbncloud.exe | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+        if (-not $exe) { throw "bin/nbncloud.exe não encontrado no pacote" }
+        $raiz = $exe.Directory.Parent.FullName
+        $versao = "6.0.3.${env:NBN_BUILD}"
+        & "${env:GITHUB_WORKSPACE}/branding/windows/build-msi.ps1" -SourceDir $raiz -Version $versao -Out "${env:GITHUB_WORKSPACE}/binaries/"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
