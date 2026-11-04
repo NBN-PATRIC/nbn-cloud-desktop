@@ -24,6 +24,7 @@ LOGO = AQUI / 'logo-nbn.jpg'
 S = 1024
 NAVY = (31, 42, 68, 255)       # #1F2A44, cor do timbrado
 AZUL = (68, 114, 195, 255)     # #4472C3
+AZUL_CLARO = (143, 179, 240, 255)  # #8FB3F0, "Cloud" sobre o azul-marinho do assistente
 CLARO = (230, 234, 242, 255)   # nuvem na barra escura
 BRANCO = (255, 255, 255, 255)
 ESTADOS = {
@@ -136,9 +137,10 @@ def icone_estado(estado, cor_nuvem):
 
 
 def logo_assistente():
+    # o assistente usa o fundo azul-marinho do tema (wizardHeaderBackgroundColor): logo em branco
     im = Image.open(LOGO).convert('L')
     mascara = im.point(lambda v: 255 if v < 110 else (0 if v > 200 else int((200 - v) * 255 / 90)))
-    logo = Image.new('RGBA', im.size, NAVY)
+    logo = Image.new('RGBA', im.size, BRANCO)
     logo.putalpha(mascara)
     W, H = 480, 480
     img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -149,7 +151,7 @@ def logo_assistente():
     d = ImageDraw.Draw(img)
     texto = 'Cloud'
     tw = d.textlength(texto, font=fonte)
-    d.text(((W - tw) / 2, 24 + logo.height + 6), texto, font=fonte, fill=AZUL)
+    d.text(((W - tw) / 2, 24 + logo.height + 6), texto, font=fonte, fill=AZUL_CLARO)
     return img.crop(img.getbbox())
 
 
@@ -190,7 +192,9 @@ def main():
     x = 10
     for im in linhas[0]:
         folha.alpha_composite(im, (x, 10)); x += im.width + 20
-    folha.alpha_composite(logo_assistente().resize((200, 200 * logo_assistente().height // logo_assistente().width)), (660, 10))
+    d.rectangle([640, 0, 900, 280], fill=NAVY)
+    la = logo_assistente()
+    folha.alpha_composite(la.resize((200, 200 * la.height // la.width)), (670, 20))
     x = 10
     for im in linhas[1]:
         folha.alpha_composite(im, (x, 300)); x += im.width + 14
