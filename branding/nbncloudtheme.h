@@ -45,6 +45,11 @@ public:
     // sem página de ajuda ainda: some o item "Ajuda" do menu
     QString helpUrl() const override { return QString(); }
 
+    // Sem arquivos virtuais. O plugin do Windows (CfApi) é fechado e não entra neste build; sem ele, o
+    // "melhor modo" vira o de sufixo (.nbncloud), que é experimental, e as pastas novas de Spaces no
+    // Infinite Scale nasceriam nele (accountsettings.cpp). Desligado, tudo sincroniza o arquivo de verdade.
+    bool showVirtualFilesOption() const override { return false; }
+
     // Servidor sugerido: o que vier do instalador/GPO; sem nada, o NBN Cloud corporativo.
     QString suggestedServerUrl() const override
     {
