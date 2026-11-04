@@ -27,7 +27,7 @@ jobs:
     permissions:
       contents: read
     name: windows-cl-x86_64
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       CRAFT_TARGET: windows-cl-msvc2022-x86_64
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
