@@ -30,6 +30,6 @@ valor pode ir em `HKLM\Software\Policies\NBN Telecom\NBN Cloud\ServerUrl`.
 ## Compilar
 
 O build roda no GitHub Actions (`.github/workflows/nbn-windows.yml`): KDE Craft com o cache de dependências do
-ownCloud 6.0, pacote portátil e depois o MSI (`branding/windows/build-msi.ps1`, WiX 5).
+ownCloud 6.0, pacote portátil e depois o MSI (`branding/windows/gerar-msi.ps1`, WiX 5).
 
 Os ícones são gerados por `branding/tools/gerar_icones.py` (Pillow) a partir de `branding/tools/logo-nbn.jpg`.

@@ -3,14 +3,14 @@
   NBN Cloud: instalador MSI (WiX 5).
 
   Instalação silenciosa com o servidor da empresa já sugerido:
-    msiexec /i NBNCloud-<versão>-x64.msi SERVERURL=https://klcloud.nbntelecom.com.br /qn
+    msiexec /i NBNCloud-<versão>-x64.msi SERVERURL=https://cloud.suaempresa.com.br /qn
 
   SERVERURL é gravado em HKLM\Software\NBN Telecom\NBN Cloud\ServerUrl e só PREENCHE a primeira
   tela do assistente (o usuário pode trocar e pode ter contas em mais de um servidor).
   Sem SERVERURL o cliente sugere https://cloud.nbntelecom.com.br.
   Numa atualização sem SERVERURL, o valor gravado antes é mantido.
 
-  Variáveis (passadas pelo build-msi.ps1):
+  Variáveis (passadas pelo gerar-msi.ps1):
     Version     versão do produto (ex.: 6.0.3.12; o MSI compara só os três primeiros campos)
     SourceDir   pasta com o pacote portátil do Craft (bin\nbncloud.exe e dependências)
 -->
