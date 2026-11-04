@@ -14,6 +14,7 @@
 
 #include "application.h"
 #include "guiutility.h"
+#include "theme.h"
 
 #include <QCoreApplication>
 
@@ -25,7 +26,7 @@ void Utility::startShellIntegration()
 
 QString Utility::socketApiSocketPath()
 {
-    return QStringLiteral(R"(\\.\pipe\ownCloud-%1)").arg(qEnvironmentVariable("USERNAME"));
+    return QStringLiteral(R"(\\.\pipe\%1-%2)").arg(Theme::instance()->appName(), qEnvironmentVariable("USERNAME"));
 }
 
 } // namespace OCC

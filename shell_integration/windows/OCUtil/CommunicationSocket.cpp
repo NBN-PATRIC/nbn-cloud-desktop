@@ -46,7 +46,7 @@ std::wstring getUserName() {
 std::wstring CommunicationSocket::DefaultPipePath()
 {
     auto pipename = std::wstring(L"\\\\.\\pipe\\");
-    pipename += L"ownCloud-";
+    pipename += L"NBNCloud-"; // NBN Cloud: igual ao APPLICATION_SHORTNAME do branding
     pipename += getUserName();
     return pipename;
 }

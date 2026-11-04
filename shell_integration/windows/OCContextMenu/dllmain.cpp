@@ -19,8 +19,8 @@
 
 #include <algorithm>
 
-// {841A0AAD-AA11-4B50-84D9-7F8E727D77D7}
-static const GUID CLSID_FileContextMenuExt = { 0x841a0aad, 0xaa11, 0x4b50, { 0x84, 0xd9, 0x7f, 0x8e, 0x72, 0x7d, 0x77, 0xd7 } };
+// NBN Cloud: {6F3C2A10-8E4B-4C1D-9A7E-2B5D0C4E1F80} (o ownCloud usa {841A0AAD-AA11-4B50-84D9-7F8E727D77D7})
+static const GUID CLSID_FileContextMenuExt = { 0x6f3c2a10, 0x8e4b, 0x4c1d, { 0x9a, 0x7e, 0x2b, 0x5d, 0x0c, 0x4e, 0x1f, 0x80 } };
 
 HINSTANCE g_hInst = nullptr;
 long        g_cDllRef = 0;
