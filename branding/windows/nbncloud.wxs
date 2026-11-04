@@ -19,7 +19,8 @@
     ArteDir     pasta com nbncloud.ico, banner.bmp, dialogo.bmp e licenca.rtf (arte_instalador.py)
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <Package Name="NBN Cloud"
            Manufacturer="NBN Telecom"
            Version="$(var.Version)"
@@ -64,6 +65,17 @@
                  Sequence="ui" />
     <CustomAction Id="AbrirNbnCloud" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec"
                   Impersonate="yes" />
+    <!-- Fecha o NBN Cloud antes de mexer nos arquivos (desinstalar e atualizar). Primeiro o aviso de fim
+         de sessão (WM_QUERYENDSESSION/WM_ENDSESSION), que o cliente trata fechando direito (platform_win.cpp,
+         janela ocWindowMessageWatcher); o que ainda estiver aberto depois do prazo é encerrado à força.
+         A ação vem antes do RemoveFiles para o encerramento à força também acontecer antes de apagar. -->
+    <util:CloseApplication Id="FecharNbnCloud" Target="nbncloud.exe" Description="NBN Cloud"
+                           EndSessionMessage="yes" Timeout="15" TerminateProcess="1" RebootPrompt="no" />
+    <InstallExecuteSequence>
+      <Custom Action="override Wix4CloseApplications_$(sys.BUILDARCHSHORT)" Before="RemoveFiles"
+              Condition="VersionNT &gt; 400" />
+    </InstallExecuteSequence>
+
     <UI>
       <ui:WixUI Id="WixUI_Minimal" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="AbrirNbnCloud"
