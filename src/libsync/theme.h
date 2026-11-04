@@ -202,12 +202,6 @@ public:
     QString overrideServerUrlV2() const;
 
     /**
-     * NBN Cloud: servidor sugerido (editável) quando o assistente abre sem URL.
-     * O padrão lê ConfigFile::suggestedServerUrl(); a marca pode completar com um valor fixo de reserva.
-     */
-    virtual QString suggestedServerUrl() const;
-
-    /**
      * If set to a non-empty string, the path part of the URL will be overwritten with this path.
      * This can be used to set the end-point to a fixed location, and thereby shorten the URL that
      * is given to the users.
@@ -489,6 +483,15 @@ public:
      * Default: false
      */
     virtual bool spacesAreCalledFolders() const;
+
+    /**
+     * NBN Cloud: servidor sugerido (editável) quando o assistente abre sem URL.
+     * O padrão lê ConfigFile::suggestedServerUrl(); a marca pode completar com um valor fixo de reserva.
+     *
+     * Fica DEPOIS de todos os outros virtuais de propósito: assim a vtable do Theme continua igual à do
+     * ownCloud 6.0.3 até aqui, e um plugin compilado pelo ownCloud (ex.: o de VFS do Windows) não se perde.
+     */
+    virtual QString suggestedServerUrl() const;
 
     bool withCrashReporter() const;
 

@@ -9,6 +9,7 @@
 
 #include "common/utility.h"
 #include "common/version.h"
+#include "common/vfs.h"
 #include "resources/resources.h"
 #include "theme.h"
 
@@ -45,10 +46,11 @@ public:
     // sem página de ajuda ainda: some o item "Ajuda" do menu
     QString helpUrl() const override { return QString(); }
 
-    // Sem arquivos virtuais. O plugin do Windows (CfApi) é fechado e não entra neste build; sem ele, o
-    // "melhor modo" vira o de sufixo (.nbncloud), que é experimental, e as pastas novas de Spaces no
-    // Infinite Scale nasceriam nele (accountsettings.cpp). Desligado, tudo sincroniza o arquivo de verdade.
-    bool showVirtualFilesOption() const override { return false; }
+    // Arquivos virtuais SÓ com o plugin do Windows (CfApi), que é o padrão da NBN. O plugin é fechado (da
+    // ownCloud) e não vem no build público: o MSI interno o acrescenta em bin\ (NBN-CLOUD\scripts no hub).
+    // Sem ele, o "melhor modo" viraria o de sufixo (.nbncloud), experimental, e as pastas novas de Spaces no
+    // Infinite Scale nasceriam nele (accountsettings.cpp); por isso, sem CfApi, a opção some.
+    bool showVirtualFilesOption() const override { return VfsPluginManager::instance().isVfsPluginAvailable(Vfs::WindowsCfApi); }
 
     // Servidor sugerido: o que vier do instalador/GPO; sem nada, o NBN Cloud corporativo.
     QString suggestedServerUrl() const override
