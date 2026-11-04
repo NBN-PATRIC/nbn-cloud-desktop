@@ -230,6 +230,11 @@ QString Theme::overrideServerUrlV2() const
     return serverOverride;
 }
 
+QString Theme::suggestedServerUrl() const
+{
+    return ConfigFile().suggestedServerUrl();
+}
+
 QString Theme::overrideServerPath() const
 {
     return {};

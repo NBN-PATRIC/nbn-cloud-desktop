@@ -198,6 +198,14 @@ public:
      */
     static constexpr int UnusedLegacySettingsVersionNumber = 13;
 
+    /**
+     * NBN Cloud: endereço do servidor SUGERIDO na primeira tela do assistente (não fixa nada).
+     * Ordem: política (HKCU/HKLM\Software\Policies\<vendor>\<app>\ServerUrl), configuração do
+     * sistema (HKLM\Software\<vendor>\<app>\ServerUrl, gravada pelo instalador) ou do usuário,
+     * variável de ambiente NBNCLOUD_SERVER_URL. Vazio se nada estiver definido.
+     */
+    QString suggestedServerUrl() const;
+
 protected:
     QVariant getPolicySetting(const QString &policy, const QVariant &defaultValue = QVariant()) const;
     void storeData(const QString &group, const QString &key, const QVariant &value);

@@ -202,6 +202,12 @@ public:
     QString overrideServerUrlV2() const;
 
     /**
+     * NBN Cloud: servidor sugerido (editável) quando o assistente abre sem URL.
+     * O padrão lê ConfigFile::suggestedServerUrl(); a marca pode completar com um valor fixo de reserva.
+     */
+    virtual QString suggestedServerUrl() const;
+
+    /**
      * If set to a non-empty string, the path part of the URL will be overwritten with this path.
      * This can be used to set the end-point to a fixed location, and thereby shorten the URL that
      * is given to the users.

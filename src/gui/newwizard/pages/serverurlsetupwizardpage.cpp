@@ -23,7 +23,12 @@ ServerUrlSetupWizardPage::ServerUrlSetupWizardPage(const QUrl &serverUrl)
         _ui->urlLineEdit->hide();
         _ui->serverUrlLabel->hide();
     } else {
-        _ui->urlLineEdit->setText(serverUrl.toString());
+        QString initialUrl = serverUrl.toString();
+        if (initialUrl.isEmpty()) {
+            // NBN Cloud: endereço sugerido pelo instalador/GPO; o usuário pode trocar
+            initialUrl = Theme::instance()->suggestedServerUrl();
+        }
+        _ui->urlLineEdit->setText(initialUrl);
 
         connect(this, &AbstractSetupWizardPage::pageDisplayed, this, [this]() {
             _ui->urlLineEdit->setFocus();

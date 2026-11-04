@@ -266,6 +266,19 @@ QVariant ConfigFile::getPolicySetting(const QString &setting, const QVariant &de
     return defaultValue;
 }
 
+QString ConfigFile::suggestedServerUrl() const
+{
+    const QString key = QStringLiteral("ServerUrl");
+    QString url = getPolicySetting(key).toString().trimmed();
+    if (url.isEmpty()) {
+        url = getValue(key).toString().trimmed();
+    }
+    if (url.isEmpty()) {
+        url = qEnvironmentVariable("NBNCLOUD_SERVER_URL").trimmed();
+    }
+    return url;
+}
+
 QString ConfigFile::configPath()
 {
     if (_confDir.isEmpty()) {
