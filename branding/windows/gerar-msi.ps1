@@ -3,7 +3,8 @@
 
   .\gerar-msi.ps1 -SourceDir <pasta com bin\nbncloud.exe> -Version 6.0.3.12 -Out <pasta de saída>
 
-  Usa o WiX 5 (dotnet tool, versão fixa, instalado numa pasta própria) e o Pillow para o .ico.
+  Usa o WiX 5 (dotnet tool e extensões UI e Util, versão fixa, numa pasta própria) e o Pillow para o
+  ícone, a arte das telas e a licença (arte_instalador.py).
   Roda no CI (nbn-windows.yml) e em qualquer PC com o .NET SDK e Python.
 #>
 param(
@@ -32,17 +33,34 @@ if (-not (Test-Path $wix)) {
     if ($LASTEXITCODE -ne 0) { throw 'falha ao instalar o WiX' }
 }
 
-# ícone do Painel de Controle e do atalho, a partir dos PNGs da marca
-$png = Join-Path $aqui '..\theme\colored\256-nbncloud-icon.png'
-$ico = Join-Path $Out 'nbncloud.ico'
-& $Python -c "from PIL import Image; import sys; Image.open(sys.argv[1]).save(sys.argv[2], sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])" $png $ico
-if ($LASTEXITCODE -ne 0) { throw 'falha ao gerar o .ico (precisa do Pillow)' }
+# extensões das telas (UI) e da ação "abrir no fim" (Util), no cache local da pasta de ferramentas
+$extensoes = 'WixToolset.UI.wixext', 'WixToolset.Util.wixext'
+Push-Location $ferramentas
+try {
+    foreach ($e in $extensoes) {
+        if (-not (Test-Path (Join-Path $ferramentas ".wix\extensions\$e\$WixVersion"))) {
+            & $wix extension add "$e/$WixVersion" | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "falha ao instalar a extensão $e" }
+        }
+    }
 
-$msi = Join-Path $Out "NBNCloud-$Version-x64.msi"
-& $wix build (Join-Path $aqui 'nbncloud.wxs') -arch x64 `
-    -d "Version=$Version" -d "SourceDir=$SourceDir" -d "IconFile=$ico" `
-    -o $msi | Out-Host
-if ($LASTEXITCODE -ne 0) { throw 'falha no wix build' }
+    # ícone, faixas das telas e licença, a partir dos PNGs da marca e do COPYING
+    $arte = Join-Path $tmp "nbncloud-arte-$PID"
+    $argsArte = @((Join-Path $aqui 'arte_instalador.py'), $arte)
+    if (Test-Path (Join-Path $SourceDir 'bin\ownCloud_vfs_wincfapi.dll')) { $argsArte += '--plugin-vfs' }
+    & $Python @argsArte
+    if ($LASTEXITCODE -ne 0) { throw 'falha ao gerar a arte do instalador (precisa do Pillow)' }
+
+    $msi = Join-Path $Out "NBNCloud-$Version-x64.msi"
+    & $wix build (Join-Path $aqui 'nbncloud.wxs') -arch x64 -culture pt-BR `
+        -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext `
+        -d "Version=$Version" -d "SourceDir=$SourceDir" -d "ArteDir=$arte" `
+        -o $msi | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'falha no wix build' }
+}
+finally {
+    Pop-Location
+    if ($arte) { Remove-Item $arte -Recurse -Force -ErrorAction SilentlyContinue }
+}
 Remove-Item (Join-Path $Out '*.wixpdb') -ErrorAction SilentlyContinue
-Remove-Item $ico -ErrorAction SilentlyContinue
 Get-Item $msi | Format-Table Name, Length
