@@ -28,8 +28,6 @@
 		<string>com.apple.fileprovider-nonui</string>
 		<key>NSExtensionPrincipalClass</key>
 		<string>NextcloudFileProviderKit.FileProviderExtension</string>
-		<key>NSExtensionFileProviderDocumentGroup</key>
-		<string>br.com.nbntelecom.cloud.fpteste</string>
 		<key>NSExtensionFileProviderSupportsEnumeration</key>
 		<true/>
 	</dict>

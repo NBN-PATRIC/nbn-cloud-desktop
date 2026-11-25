@@ -54,6 +54,7 @@ jobs:
         git checkout -q FETCH_HEAD
         mv shell_integration/MacOSX/NextcloudFileProviderKit ../NextcloudFileProviderKit
         cd .. && rm -rf nc && ls NextcloudFileProviderKit
+        python3 ../shell_integration/MacOSX/NBNCloudFileProvider/patches/aplicar.py NextcloudFileProviderKit
 
     - name: Gerar o projeto (XcodeGen)
       working-directory: shell_integration/MacOSX/NBNCloudFileProvider
@@ -80,6 +81,8 @@ jobs:
         mkdir -p saida
         ditto -c -k --keepParent "$APP" saida/NBNCloudFPTeste.zip
         lipo -info "$EXT/Contents/MacOS/NBNCloudFileProviderExt"
+        echo "bibliotecas dinâmicas da extensão:"; otool -L "$EXT/Contents/MacOS/NBNCloudFileProviderExt" | grep -v "/usr/lib\|/System" || true
+        ls "$EXT/Contents/Frameworks" "$APP/Contents/Frameworks" 2>/dev/null || true
         shasum -a 256 saida/*.zip
 
     - name: Upload

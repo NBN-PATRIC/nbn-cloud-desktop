@@ -40,9 +40,12 @@ targets:
         INFOPLIST_FILE: Ext/Info.plist
         CODE_SIGN_ENTITLEMENTS: Ext/FileProviderExt.entitlements
         OTHER_LDFLAGS: ["-ObjC"]
+        # bibliotecas dinâmicas dos pacotes (RealmSwift) vão dentro da própria extensão
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks"]
     dependencies:
       - package: NextcloudFileProviderKit
         product: NextcloudFileProviderKit
+        embed: true
   NBNCloudFPTeste:
     type: application
     platform: macOS
