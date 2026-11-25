@@ -47,7 +47,10 @@ try {
     # ícone, faixas das telas e licença, a partir dos PNGs da marca e do COPYING
     $arte = Join-Path $tmp "nbncloud-arte-$PID"
     $argsArte = @((Join-Path $aqui 'arte_instalador.py'), $arte)
-    if (Test-Path (Join-Path $SourceDir 'bin\ownCloud_vfs_wincfapi.dll')) { $argsArte += '--plugin-vfs' }
+    # aviso de software não livre só para a DLL FECHADA da ownCloud (assinada por ela, posta em bin\ pelo
+    # montar-msi-vfs.ps1); o plugin aberto, compilado deste código (GPL), não leva o aviso
+    $dllVfs = Join-Path $SourceDir 'bin\ownCloud_vfs_wincfapi.dll'
+    if ((Test-Path $dllVfs) -and ((Get-AuthenticodeSignature $dllVfs).SignerCertificate.Subject -match 'ownCloud')) { $argsArte += '--plugin-vfs' }
     & $Python @argsArte
     if ($LASTEXITCODE -ne 0) { throw 'falha ao gerar a arte do instalador (precisa do Pillow)' }
 

@@ -46,10 +46,10 @@ public:
     // sem página de ajuda ainda: some o item "Ajuda" do menu
     QString helpUrl() const override { return QString(); }
 
-    // Arquivos virtuais SÓ com o plugin do Windows (CfApi), que é o padrão da NBN. O plugin é fechado (da
-    // ownCloud) e não vem no build público: o MSI interno o acrescenta em bin\ (NBN-CLOUD\scripts no hub).
-    // Sem ele, o "melhor modo" viraria o de sufixo (.nbncloud), experimental, e as pastas novas de Spaces no
-    // Infinite Scale nasceriam nele (accountsettings.cpp); por isso, sem CfApi, a opção some.
+    // Arquivos virtuais SÓ com o plugin do Windows (CfApi), que é o padrão da NBN. Desde 25/11/2026 o plugin vem
+    // compilado do código aberto (src/plugins/vfs/win, relicenciado pela ownCloud em GPL-2.0-or-later em 2025).
+    // Sem ele (macOS, Linux), o "melhor modo" viraria o de sufixo (.nbncloud), experimental, e as pastas novas de
+    // Spaces no Infinite Scale nasceriam nele (accountsettings.cpp); por isso, sem CfApi, a opção some.
     bool showVirtualFilesOption() const override { return VfsPluginManager::instance().isVfsPluginAvailable(Vfs::WindowsCfApi); }
 
     // Servidor sugerido: o que vier do instalador/GPO; sem nada, o NBN Cloud corporativo.

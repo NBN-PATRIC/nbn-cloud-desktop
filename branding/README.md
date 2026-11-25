@@ -15,9 +15,10 @@ o servidor clássico e com o Infinite Scale, então o mesmo programa atende os d
 - Servidor sugerido na primeira tela, sem travar: vem do instalador, da política do Windows ou de
   `NBNCLOUD_SERVER_URL`. O programa continua aceitando várias contas, em servidores diferentes.
 - Convive com o ownCloud Desktop na mesma máquina (canal do Explorer, CLSIDs e nomes de overlay próprios).
-- Arquivos virtuais no Windows só aparecem se o plugin CfApi estiver presente na pasta do programa. Esse plugin
-  não faz parte do código aberto do ownCloud, então este build não o traz; sem ele, a opção some (em vez de cair
-  no modo experimental por sufixo).
+- Arquivos virtuais no Windows (API Cloud Files, a mesma do OneDrive). O plugin era fechado e a ownCloud o
+  relicenciou em GPL-2.0-or-later em 2025 (`owncloud/client#12353`); este fork o traz em `src/plugins/vfs/win`,
+  adaptado ao núcleo 6.0.x (origem em `src/plugins/vfs/win/NBN-ORIGEM.md`). Sem o plugin (macOS, Linux) a opção
+  some, em vez de cair no modo experimental por sufixo.
 
 ## Instalar
 
