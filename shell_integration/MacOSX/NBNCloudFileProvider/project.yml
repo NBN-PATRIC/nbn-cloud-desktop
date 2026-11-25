@@ -1,0 +1,60 @@
+# NBN Cloud: arquivos virtuais no macOS (extensão File Provider). Projeto gerado pelo XcodeGen:
+#   xcodegen generate   (dentro desta pasta; o CI faz isso)
+#
+# Fase 1 (teste de viabilidade): a extensão usa o NextcloudFileProviderKit (LGPL-3.0-or-later) do
+# nextcloud/desktop, baixado pelo CI num commit fixo em ../../../_externo/NextcloudFileProviderKit, e um app
+# de teste registra o domínio e entrega a conta pelo canal XPC (ClientCommunicationProtocol).
+# Sem conta de desenvolvedor da Apple: assinatura ad hoc ("-").
+name: NBNCloudFileProvider
+options:
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+packages:
+  NextcloudFileProviderKit:
+    path: ../../../_externo/NextcloudFileProviderKit
+settings:
+  base:
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+schemes:
+  NBNCloudFPTeste:
+    build:
+      targets:
+        NBNCloudFPTeste: all
+targets:
+  NBNCloudFileProviderExt:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Ext
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.nbntelecom.cloud.fpteste.FileProviderExt
+        PRODUCT_NAME: NBNCloudFileProviderExt
+        INFOPLIST_FILE: Ext/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Ext/FileProviderExt.entitlements
+        OTHER_LDFLAGS: ["-ObjC"]
+    dependencies:
+      - package: NextcloudFileProviderKit
+        product: NextcloudFileProviderKit
+  NBNCloudFPTeste:
+    type: application
+    platform: macOS
+    sources:
+      - Teste
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.nbntelecom.cloud.fpteste
+        PRODUCT_NAME: NBNCloudFPTeste
+        INFOPLIST_FILE: Teste/Info.plist
+    dependencies:
+      - target: NBNCloudFileProviderExt
+        embed: true
+      - package: NextcloudFileProviderKit
+        product: NextcloudFileProviderXPC

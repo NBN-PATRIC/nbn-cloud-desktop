@@ -1,0 +1,88 @@
+name: NBN Cloud - macOS arquivos virtuais (teste)
+
+# Fase 1 dos arquivos virtuais no macOS: compila a extensão File Provider (NextcloudFileProviderKit num commit
+# fixo do nextcloud/desktop) e o app de teste que registra o domínio e entrega a conta. Assinatura ad hoc.
+# Código e instruções: shell_integration/MacOSX/NBNCloudFileProvider.
+
+on:
+  push:
+    branches:
+      - 'nbn/**'
+    paths:
+      - 'shell_integration/MacOSX/NBNCloudFileProvider/**'
+      - '.github/workflows/nbn-macos-fileprovider.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  # nextcloud/desktop, commit de 25/11/2026 (NextcloudFileProviderKit, LGPL-3.0-or-later)
+  NC_DESKTOP_SHA: bad83ce9777529d133897c142e6974256572cdc0
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: macos-15
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Check out
+      uses: actions/checkout@v4
+
+    - name: Xcode mais novo do runner
+      run: |
+        ls -d /Applications/Xcode*.app
+        XC=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+        sudo xcode-select -s "$XC"
+        xcodebuild -version
+
+    - name: NextcloudFileProviderKit
+      run: |
+        set -euo pipefail
+        mkdir -p _externo && cd _externo
+        git init -q nc && cd nc
+        git remote add origin https://github.com/nextcloud/desktop.git
+        git sparse-checkout set shell_integration/MacOSX/NextcloudFileProviderKit
+        git fetch -q --depth=1 origin "$NC_DESKTOP_SHA"
+        git checkout -q FETCH_HEAD
+        mv shell_integration/MacOSX/NextcloudFileProviderKit ../NextcloudFileProviderKit
+        cd .. && rm -rf nc && ls NextcloudFileProviderKit
+
+    - name: Gerar o projeto (XcodeGen)
+      working-directory: shell_integration/MacOSX/NBNCloudFileProvider
+      run: |
+        brew install xcodegen
+        xcodegen generate
+
+    - name: Compilar
+      working-directory: shell_integration/MacOSX/NBNCloudFileProvider
+      run: |
+        set -o pipefail
+        xcodebuild -project NBNCloudFileProvider.xcodeproj -scheme NBNCloudFPTeste -configuration Release \
+          -derivedDataPath "$RUNNER_TEMP/dd" -destination 'platform=macOS,arch=arm64' \
+          CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES build | tail -40
+
+    - name: Conferir e empacotar
+      run: |
+        set -euo pipefail
+        APP="$RUNNER_TEMP/dd/Build/Products/Release/NBNCloudFPTeste.app"
+        EXT="$APP/Contents/PlugIns/NBNCloudFileProviderExt.appex"
+        codesign --verify --deep --strict --verbose=2 "$APP"
+        codesign -d --entitlements - "$EXT"
+        plutil -p "$EXT/Contents/Info.plist" | grep -A6 NSExtension
+        mkdir -p saida
+        ditto -c -k --keepParent "$APP" saida/NBNCloudFPTeste.zip
+        shasum -a 256 saida/*.zip
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: nbn-cloud-fileprovider-teste
+        path: saida/*
+        retention-days: 14
