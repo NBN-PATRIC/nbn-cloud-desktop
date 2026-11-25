@@ -8,6 +8,10 @@ on:
   push:
     branches:
       - 'nbn/**'
+    # a extensão de arquivos virtuais do macOS tem workflow próprio (nbn-macos-fileprovider.yml)
+    paths-ignore:
+      - 'shell_integration/MacOSX/NBNCloudFileProvider/**'
+      - '.github/workflows/nbn-macos-fileprovider.yml'
     tags:
       - 'nbn-v*'
   workflow_dispatch:
