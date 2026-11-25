@@ -1,7 +1,9 @@
 name: NBN Cloud - macOS
 
-# Build do cliente desktop NBN Cloud (fork do ownCloud 6.0.x) para macOS em Apple Silicon (arm64).
-# Mesmo pipeline do upstream (KDE Craft + cache de dependencias do ownCloud, alvo macos-clang-arm64).
+# Build do cliente desktop NBN Cloud (fork do ownCloud 6.0.x) para macOS.
+# Mesmo pipeline do upstream (KDE Craft + cache de dependencias do ownCloud).
+# Padrao: Intel (macos-64-clang no runner macos-15-intel), que roda em todo Mac (no Apple Silicon pelo Rosetta):
+# os runners arm64 do GitHub ficaram sem capacidade em 25/11/2026. arm64 sob demanda (workflow_dispatch).
 # Sem conta de desenvolvedor da Apple: o app sai com assinatura ad hoc ("-"), que o Apple Silicon exige para rodar.
 # Na primeira abertura o usuario libera em Ajustes > Privacidade e Seguranca > "Abrir Mesmo Assim".
 
@@ -16,6 +18,12 @@ on:
     tags:
       - 'nbn-v*'
   workflow_dispatch:
+    inputs:
+      arquitetura:
+        description: 'intel (macos-64-clang) ou arm64 (macos-clang-arm64)'
+        type: choice
+        options: [intel, arm64]
+        default: intel
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,10 +39,11 @@ jobs:
   build:
     permissions:
       contents: read
-    name: macos-clang-arm64
-    runs-on: macos-15
+    name: macos-${{ inputs.arquitetura || 'intel' }}
+    runs-on: ${{ (inputs.arquitetura || 'intel') == 'arm64' && 'macos-15' || 'macos-15-intel' }}
     env:
-      CRAFT_TARGET: macos-clang-arm64
+      CRAFT_TARGET: ${{ (inputs.arquitetura || 'intel') == 'arm64' && 'macos-clang-arm64' || 'macos-64-clang' }}
+      ARQ: ${{ (inputs.arquitetura || 'intel') == 'arm64' && 'arm64' || 'x86_64' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # lidos pela receita do Craft (owncloud-client.py) para achar o app da marca
       APPLICATION_EXECUTABLE: nbncloud
@@ -49,7 +58,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/cache
-        key: ${{ runner.os }}-macos-clang-arm64-6.0
+        key: ${{ runner.os }}-${{ env.CRAFT_TARGET }}-6.0
 
     - name: Clone CraftMaster
       run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
@@ -115,15 +124,15 @@ jobs:
         ln -s /Applications "$STAGE/Aplicativos"
         VER="6.0.3.${NBN_BUILD}"
         OUT="$GITHUB_WORKSPACE/binaries"
-        hdiutil create -volname "NBN Cloud" -srcfolder "$STAGE" -ov -format UDZO "$OUT/NBNCloud-$VER-macos-arm64.dmg"
-        cp "$OUT/NBNCloud-$VER-macos-arm64.dmg" "$OUT/NBN-Cloud-macOS.dmg"
+        hdiutil create -volname "NBN Cloud" -srcfolder "$STAGE" -ov -format UDZO "$OUT/NBNCloud-$VER-macos-$ARQ.dmg"
+        cp "$OUT/NBNCloud-$VER-macos-$ARQ.dmg" "$OUT/NBN-Cloud-macOS.dmg"
         (cd "$OUT" && shasum -a 256 *.dmg | tee SHA256SUMS-macos.txt)
 
     - name: Upload artifacts
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: nbn-cloud-macos-arm64
+        name: nbn-cloud-macos-${{ env.ARQ }}
         path: ${{ github.workspace }}/binaries/*
         retention-days: 30
 

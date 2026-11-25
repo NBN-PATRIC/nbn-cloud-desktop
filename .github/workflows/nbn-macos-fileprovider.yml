@@ -27,7 +27,8 @@ jobs:
   build:
     permissions:
       contents: read
-    runs-on: macos-15
+    # runner Intel (os arm64 do GitHub ficaram sem capacidade em 25/11/2026); o build sai universal (arm64 + x86_64)
+    runs-on: macos-15-intel
     defaults:
       run:
         shell: bash
@@ -65,7 +66,7 @@ jobs:
       run: |
         set -o pipefail
         xcodebuild -project NBNCloudFileProvider.xcodeproj -scheme NBNCloudFPTeste -configuration Release \
-          -derivedDataPath "$RUNNER_TEMP/dd" -destination 'platform=macOS,arch=arm64' \
+          -derivedDataPath "$RUNNER_TEMP/dd" -destination 'generic/platform=macOS' ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO \
           CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES build | tail -40
 
     - name: Conferir e empacotar
@@ -78,6 +79,7 @@ jobs:
         plutil -p "$EXT/Contents/Info.plist" | grep -A6 NSExtension
         mkdir -p saida
         ditto -c -k --keepParent "$APP" saida/NBNCloudFPTeste.zip
+        lipo -info "$EXT/Contents/MacOS/NBNCloudFileProviderExt"
         shasum -a 256 saida/*.zip
 
     - name: Upload
