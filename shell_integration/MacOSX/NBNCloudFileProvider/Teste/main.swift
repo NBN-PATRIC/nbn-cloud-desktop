@@ -18,21 +18,35 @@ func esperar(_ segundos: Double = 60, _ corpo: (@escaping () -> Void) -> Void) {
     if sem.wait(timeout: .now() + segundos) == .timedOut { print("tempo esgotado") }
 }
 
-func comExtensao(_ uso: @escaping (ClientCommunicationProtocol, @escaping () -> Void) -> Void) {
+// O serviço e a conexão precisam ficar vivos: liberados, a conexão cai e o kit cria outra instância da extensão,
+// que não tem a conta (a conta fica na instância; o app principal a reentrega a cada conexão, como no Nextcloud).
+var servicoRetido: NSFileProviderService?
+var conexaoRetida: NSXPCConnection?
+
+func comExtensao(manterSegundos: Double = 0, _ uso: @escaping (ClientCommunicationProtocol, @escaping () -> Void) -> Void) {
     guard let gerente = NSFileProviderManager(for: dominio) else { print("domínio não registrado: rode add"); return }
     esperar { pronto in
         gerente.getService(named: servico, for: .rootContainer) { serv, erro in
             guard let serv else { print("serviço XPC indisponível:", erro.map { "\($0)" } ?? "-"); pronto(); return }
+            servicoRetido = serv
             serv.getFileProviderConnection { conexao, erro in
                 guard let conexao else { print("sem conexão XPC:", erro.map { "\($0)" } ?? "-"); pronto(); return }
+                conexaoRetida = conexao
                 conexao.remoteObjectInterface = NSXPCInterface(with: ClientCommunicationProtocol.self)
                 conexao.resume()
                 let proxy = conexao.remoteObjectProxyWithErrorHandler { e in print("erro XPC:", e); pronto() }
                 guard let ext = proxy as? ClientCommunicationProtocol else { print("proxy inválido"); pronto(); return }
-                uso(ext) { conexao.invalidate(); pronto() }
+                uso(ext) { pronto() }
             }
         }
     }
+    if manterSegundos > 0 {
+        print("conexão mantida por \(Int(manterSegundos)) s"); fflush(stdout)
+        Thread.sleep(forTimeInterval: manterSegundos)
+    }
+    conexaoRetida?.invalidate()
+    conexaoRetida = nil
+    servicoRetido = nil
 }
 
 let args = Array(CommandLine.arguments.dropFirst())
@@ -40,11 +54,12 @@ switch args.first ?? "status" {
     case "add":
     esperar { pronto in NSFileProviderManager.add(dominio) { e in print("add:", e.map { "\($0)" } ?? "ok"); pronto() } }
     case "config":
-    guard args.count == 4, let senha = try? String(contentsOfFile: args[3], encoding: .utf8) else {
-        print("uso: config <servidor> <usuario> <arquivo-com-a-senha>"); exit(2)
+    guard args.count >= 4, let senha = try? String(contentsOfFile: args[3], encoding: .utf8) else {
+        print("uso: config <servidor> <usuario> <arquivo-com-a-senha> [segundos com a conexão aberta]"); exit(2)
     }
     try? FileManager.default.removeItem(atPath: args[3])
-    comExtensao { ext, fim in
+    let manter = args.count >= 5 ? Double(args[4]) ?? 0 : 0
+    comExtensao(manterSegundos: manter) { ext, fim in
         ext.configureAccount(withUser: args[2], userId: args[2], serverUrl: args[1],
                              password: senha.trimmingCharacters(in: .whitespacesAndNewlines), userAgent: "NBN Cloud FP teste")
         // configureAccount não responde: esta chamada com resposta garante que a anterior chegou
