@@ -45,7 +45,6 @@ targets:
     dependencies:
       - package: NextcloudFileProviderKit
         product: NextcloudFileProviderKit
-        embed: true
   NBNCloudFPTeste:
     type: application
     platform: macOS
@@ -56,6 +55,24 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.nbntelecom.cloud.fpteste
         PRODUCT_NAME: NBNCloudFPTeste
         INFOPLIST_FILE: Teste/Info.plist
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # As bibliotecas dinâmicas dos pacotes (RealmSwift) ficam em PackageFrameworks e a extensão as procura em
+    # NBNCloudFPTeste.app/Contents/Frameworks (rpath @executable_path/../../../../Frameworks): copia e assina ad hoc.
+    postBuildScripts:
+      - name: Embutir as bibliotecas dinâmicas dos pacotes
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          DEST="$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH"
+          mkdir -p "$DEST"
+          for f in "$BUILT_PRODUCTS_DIR"/PackageFrameworks/*.framework; do
+            [ -e "$f" ] || continue
+            n=$(basename "$f")
+            rm -rf "$DEST/$n"
+            ditto "$f" "$DEST/$n"
+            codesign --force --sign - "$DEST/$n"
+            echo "embutido: $n"
+          done
     dependencies:
       - target: NBNCloudFileProviderExt
         embed: true
