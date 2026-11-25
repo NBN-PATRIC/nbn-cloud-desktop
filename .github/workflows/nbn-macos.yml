@@ -75,7 +75,11 @@ jobs:
         mv shell_integration/MacOSX/NextcloudFileProviderKit ../NextcloudFileProviderKit
         cd .. && rm -rf nc
         python3 ../shell_integration/MacOSX/NBNCloudFileProvider/patches/aplicar.py NextcloudFileProviderKit
-        xcodebuild -version
+        # o kit usa APIs do SDK do macOS 26 (failOnConflict...): a extensão compila com o Xcode mais novo do runner,
+        # o resto do Craft segue no Xcode padrão (shell_integration/MacOSX/CMakeLists.txt lê esta variável)
+        XC=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+        echo "NBN_FP_DEVELOPER_DIR=$XC/Contents/Developer" >> "$GITHUB_ENV"
+        DEVELOPER_DIR="$XC/Contents/Developer" xcodebuild -version
 
     - name: Clone CraftMaster
       run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"

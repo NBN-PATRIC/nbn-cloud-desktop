@@ -30,10 +30,17 @@ add_custom_command(TARGET mac_overlayplugin POST_BUILD COMMAND ${CMAKE_COMMAND}
 set(NBN_FP_DIR "${CMAKE_SOURCE_DIR}/shell_integration/MacOSX/NBNCloudFileProvider")
 set(NBN_FP_DD "${CMAKE_CURRENT_BINARY_DIR}/nbn-fileprovider")
 find_program(XCODEGEN_EXECUTABLE xcodegen)
+# o kit precisa do SDK do macOS 26: NBN_FP_DEVELOPER_DIR (do CI) aponta o Xcode novo só para esta compilação, e o
+# SDK/alvo fixados pelo ambiente do Craft saem da frente
+set(NBN_FP_XCODEBUILD "${CMAKE_COMMAND}" -E env --unset=SDKROOT --unset=MACOSX_DEPLOYMENT_TARGET)
+if(DEFINED ENV{NBN_FP_DEVELOPER_DIR})
+    list(APPEND NBN_FP_XCODEBUILD "DEVELOPER_DIR=$ENV{NBN_FP_DEVELOPER_DIR}")
+endif()
+list(APPEND NBN_FP_XCODEBUILD xcodebuild)
 if(XCODEGEN_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/_externo/NextcloudFileProviderKit/Package.swift")
     add_custom_target(nbn_fileprovider ALL
         COMMAND "${XCODEGEN_EXECUTABLE}" generate --spec "${NBN_FP_DIR}/project.yml"
-        COMMAND xcodebuild -project "${NBN_FP_DIR}/NBNCloudFileProvider.xcodeproj" -scheme NBNCloudFileProviderExt
+        COMMAND ${NBN_FP_XCODEBUILD} -project "${NBN_FP_DIR}/NBNCloudFileProvider.xcodeproj" -scheme NBNCloudFileProviderExt
             -configuration Release -derivedDataPath "${NBN_FP_DD}" -destination generic/platform=macOS
             "ARCHS=arm64 x86_64" ONLY_ACTIVE_ARCH=NO CODE_SIGN_IDENTITY=- "NBN_FP_HOST_ID=${APPLICATION_REV_DOMAIN}" build
         WORKING_DIRECTORY "${NBN_FP_DIR}"
