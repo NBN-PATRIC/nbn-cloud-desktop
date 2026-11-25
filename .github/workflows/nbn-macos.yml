@@ -1,0 +1,134 @@
+name: NBN Cloud - macOS
+
+# Build do cliente desktop NBN Cloud (fork do ownCloud 6.0.x) para macOS em Apple Silicon (arm64).
+# Mesmo pipeline do upstream (KDE Craft + cache de dependencias do ownCloud, alvo macos-clang-arm64).
+# Sem conta de desenvolvedor da Apple: o app sai com assinatura ad hoc ("-"), que o Apple Silicon exige para rodar.
+# Na primeira abertura o usuario libera em Ajustes > Privacidade e Seguranca > "Abrir Mesmo Assim".
+
+on:
+  push:
+    branches:
+      - 'nbn/**'
+    tags:
+      - 'nbn-v*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    name: macos-clang-arm64
+    runs-on: macos-15
+    env:
+      CRAFT_TARGET: macos-clang-arm64
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # lidos pela receita do Craft (owncloud-client.py) para achar o app da marca
+      APPLICATION_EXECUTABLE: nbncloud
+      APPLICATION_SHORTNAME: NBNCloud
+      NBN_BUILD: ${{ github.run_number }}
+
+    steps:
+    - name: Check out
+      uses: actions/checkout@v4
+
+    - name: Restore cache
+      uses: actions/cache@v4
+      with:
+        path: ~/cache
+        key: ${{ runner.os }}-macos-clang-arm64-6.0
+
+    - name: Clone CraftMaster
+      run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
+
+    - name: Empacotador de Mac
+      # o craft_override.ini do Windows pede o pacote portatil; no Mac o app so fica completo (Qt dentro do
+      # bundle) pelo empacotador de DMG
+      run: |
+        $ini = "${env:GITHUB_WORKSPACE}/.github/workflows/craft_override.ini"
+        (Get-Content $ini) -replace '^Packager/PackageType = .*', 'Packager/PackageType = MacDMGPackager' | Set-Content $ini
+        Get-Content $ini
+
+    - name: Craft setup
+      run: |
+        New-Item -Path ~/cache -ItemType Directory -ErrorAction SilentlyContinue
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" --setup
+
+    - name: Craft unshelve
+      run: |
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --unshelve "${env:GITHUB_WORKSPACE}/.craft.shelf"
+
+    - name: Prepare
+      run: |
+        New-Item -ItemType Directory "${env:GITHUB_WORKSPACE}/binaries/"
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set buildNumber="${env:NBN_BUILD}" owncloud/owncloud-client
+
+    - name: Install dependencies
+      run: |
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --install-deps owncloud/owncloud-client
+
+    - name: Build
+      run: |
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache owncloud/owncloud-client
+
+    - name: Package
+      run: |
+        & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --package owncloud/owncloud-client
+
+    - name: DMG do NBN Cloud
+      # pega o app do DMG do Craft, assina ad hoc (o Craft mexe nas bibliotecas depois de compilar, o que invalida a
+      # assinatura do linker), confere e monta o DMG final com o atalho para Aplicativos
+      shell: bash
+      run: |
+        set -euo pipefail
+        ls -la "$HOME/craft/binaries/" || true
+        DMG=$(ls "$HOME"/craft/binaries/*.dmg | head -1)
+        MNT=$(mktemp -d)
+        hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
+        APP=$(find "$MNT" -maxdepth 2 -name "*.app" | head -1)
+        echo "app no DMG do Craft: $APP"
+        STAGE="$RUNNER_TEMP/dmg"
+        rm -rf "$STAGE"; mkdir -p "$STAGE"
+        ditto "$APP" "$STAGE/NBN Cloud.app"
+        hdiutil detach "$MNT"
+        xattr -cr "$STAGE/NBN Cloud.app"
+        codesign --force --deep --sign - "$STAGE/NBN Cloud.app"
+        codesign --verify --deep --strict --verbose=2 "$STAGE/NBN Cloud.app"
+        codesign -dv "$STAGE/NBN Cloud.app" 2>&1 | grep -E "Identifier|Signature|Format"
+        defaults read "$STAGE/NBN Cloud.app/Contents/Info" CFBundleIdentifier
+        defaults read "$STAGE/NBN Cloud.app/Contents/Info" CFBundleShortVersionString
+        ls "$STAGE/NBN Cloud.app/Contents/PlugIns" || true
+        ln -s /Applications "$STAGE/Aplicativos"
+        VER="6.0.3.${NBN_BUILD}"
+        OUT="$GITHUB_WORKSPACE/binaries"
+        hdiutil create -volname "NBN Cloud" -srcfolder "$STAGE" -ov -format UDZO "$OUT/NBNCloud-$VER-macos-arm64.dmg"
+        cp "$OUT/NBNCloud-$VER-macos-arm64.dmg" "$OUT/NBN-Cloud-macOS.dmg"
+        (cd "$OUT" && shasum -a 256 *.dmg | tee SHA256SUMS-macos.txt)
+
+    - name: Upload artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: nbn-cloud-macos-arm64
+        path: ${{ github.workspace }}/binaries/*
+        retention-days: 30
+
+    - name: Logs do Craft
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: craft-logs-macos
+        path: |
+          ~/craft/logs
+          ~/craft/*/logs
+        retention-days: 7
