@@ -40,6 +40,10 @@
 
 #include "resources/resources.h"
 
+#ifdef Q_OS_MACOS
+#include "macOS/nbnfileprovider_mac.h"
+#endif
+
 #include <QApplication>
 #include <QDesktopServices>
 #include <QDialog>
@@ -879,6 +883,15 @@ void ownCloudGui::runNewAccountWizard()
                                 case Wizard::SyncMode::SyncEverything:
                                 case Wizard::SyncMode::UseVfs: {
                                     bool useVfs = syncMode == Wizard::SyncMode::UseVfs;
+#ifdef Q_OS_MACOS
+                                    // NBN Cloud: no macOS os arquivos virtuais são um domínio do File Provider (Finder),
+                                    // não uma pasta sincronizada
+                                    if (useVfs && NbnFileProviderMac::isAvailable()) {
+                                        NbnFileProviderMac::instance()->enableForAccount(accountStatePtr);
+                                        accountStatePtr->setSettingUp(false);
+                                        break;
+                                    }
+#endif
                                     setUpInitialSyncFolder(accountStatePtr, useVfs);
                                     accountStatePtr->setSettingUp(false);
                                     break;

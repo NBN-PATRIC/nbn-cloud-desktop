@@ -22,11 +22,19 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1"
     CURRENT_PROJECT_VERSION: "1"
+    # identidade: a do app de teste; o build do NBN Cloud passa NBN_FP_HOST_ID=<APPLICATION_REV_DOMAIN>
+    # (a extensão precisa ter o identificador do app como prefixo)
+    NBN_FP_HOST_ID: br.com.nbntelecom.cloud.fpteste
 schemes:
   NBNCloudFPTeste:
     build:
       targets:
         NBNCloudFPTeste: all
+  # só a extensão, para o build do NBN Cloud (shell_integration/MacOSX/CMakeLists.txt) embutir no app
+  NBNCloudFileProviderExt:
+    build:
+      targets:
+        NBNCloudFileProviderExt: all
 targets:
   NBNCloudFileProviderExt:
     type: app-extension
@@ -35,7 +43,7 @@ targets:
       - Ext
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: br.com.nbntelecom.cloud.fpteste.FileProviderExt
+        PRODUCT_BUNDLE_IDENTIFIER: $(NBN_FP_HOST_ID).FileProviderExt
         PRODUCT_NAME: NBNCloudFileProviderExt
         INFOPLIST_FILE: Ext/Info.plist
         CODE_SIGN_ENTITLEMENTS: Ext/FileProviderExt.entitlements
@@ -52,7 +60,7 @@ targets:
       - Teste
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: br.com.nbntelecom.cloud.fpteste
+        PRODUCT_BUNDLE_IDENTIFIER: $(NBN_FP_HOST_ID)
         PRODUCT_NAME: NBNCloudFPTeste
         INFOPLIST_FILE: Teste/Info.plist
         ENABLE_USER_SCRIPT_SANDBOXING: NO

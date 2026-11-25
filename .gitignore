@@ -179,3 +179,7 @@ test/gui/config.ini
 test/gui/reports
 */**/__pycache__/
 test/gui/users.json
+
+# NBN Cloud: kit baixado pelo CI e projeto gerado pelo xcodegen
+/_externo/
+/shell_integration/MacOSX/NBNCloudFileProvider/*.xcodeproj/

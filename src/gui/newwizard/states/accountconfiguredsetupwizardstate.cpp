@@ -15,6 +15,7 @@
 #include "accountconfiguredsetupwizardstate.h"
 #include "gui/folderman.h"
 #include "libsync/filesystem.h"
+#include "libsync/nbnmacfileprovider.h"
 #include "pages/accountconfiguredwizardpage.h"
 #include "theme.h"
 
@@ -39,6 +40,12 @@ AccountConfiguredSetupWizardState::AccountConfiguredSetupWizardState(SetupWizard
         break;
     default:
         break;
+    }
+
+    // NBN Cloud: no macOS os arquivos virtuais vêm da extensão File Provider (src/gui/macOS)
+    if (nbnMacFileProviderAvailable()) {
+        vfsIsAvailable = true;
+        enableVfsByDefault = true;
     }
 
     // We need some sync root, either for spaces, or for OC10. It's never a Space folder.

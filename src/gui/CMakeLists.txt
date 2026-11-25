@@ -156,6 +156,10 @@ IF( APPLE )
             guiutility_mac.mm
             folderwatcher_mac.cpp)
     set_source_files_properties(guiutility_mac.mm PROPERTIES COMPILE_DEFINITIONS SOCKETAPI_TEAM_IDENTIFIER_PREFIX="${SOCKETAPI_TEAM_IDENTIFIER_PREFIX}")
+    # NBN Cloud: arquivos virtuais pela extensão File Provider (shell_integration/MacOSX/NBNCloudFileProvider)
+    target_sources(owncloudGui PRIVATE macOS/nbnfileprovider_mac.mm)
+    set_source_files_properties(macOS/nbnfileprovider_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(owncloudGui PRIVATE "-framework FileProvider")
 elseif( WIN32 )
     target_sources(owncloudGui PRIVATE
             guiutility_win.cpp

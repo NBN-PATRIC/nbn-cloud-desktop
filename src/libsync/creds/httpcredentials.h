@@ -74,6 +74,9 @@ public:
 
     // Whether we are using OAuth
     bool isUsingOAuth() const { return _authType == DetermineAuthTypeJob::AuthType::OAuth; }
+
+    // NBN Cloud: senha (ou token de acesso, no OAuth) para a extensão File Provider do macOS
+    QString password() const { return _password; }
 protected:
     HttpCredentials() = default;
 

@@ -11,10 +11,6 @@ on:
   push:
     branches:
       - 'nbn/**'
-    # a extensão de arquivos virtuais do macOS tem workflow próprio (nbn-macos-fileprovider.yml)
-    paths-ignore:
-      - 'shell_integration/MacOSX/NBNCloudFileProvider/**'
-      - '.github/workflows/nbn-macos-fileprovider.yml'
     tags:
       - 'nbn-v*'
   workflow_dispatch:
@@ -59,6 +55,27 @@ jobs:
       with:
         path: ~/cache
         key: ${{ runner.os }}-${{ env.CRAFT_TARGET }}-6.0
+
+    - name: Extensão File Provider (xcodegen e NextcloudFileProviderKit)
+      # o CMake (shell_integration/MacOSX) compila a extensão e a põe no app se achar os dois
+      shell: bash
+      env:
+        # nextcloud/desktop, commit de 25/11/2026 (NextcloudFileProviderKit, LGPL-3.0-or-later); o mesmo do
+        # workflow nbn-macos-fileprovider.yml
+        NC_DESKTOP_SHA: bad83ce9777529d133897c142e6974256572cdc0
+      run: |
+        set -euo pipefail
+        brew install xcodegen
+        mkdir -p _externo && cd _externo
+        git init -q nc && cd nc
+        git remote add origin https://github.com/nextcloud/desktop.git
+        git sparse-checkout set shell_integration/MacOSX/NextcloudFileProviderKit
+        git fetch -q --depth=1 origin "$NC_DESKTOP_SHA"
+        git checkout -q FETCH_HEAD
+        mv shell_integration/MacOSX/NextcloudFileProviderKit ../NextcloudFileProviderKit
+        cd .. && rm -rf nc
+        python3 ../shell_integration/MacOSX/NBNCloudFileProvider/patches/aplicar.py NextcloudFileProviderKit
+        xcodebuild -version
 
     - name: Clone CraftMaster
       run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
@@ -115,9 +132,24 @@ jobs:
         ditto "$APP" "$STAGE/NBN Cloud.app"
         hdiutil detach "$MNT"
         xattr -cr "$STAGE/NBN Cloud.app"
-        codesign --force --deep --sign - "$STAGE/NBN Cloud.app"
-        codesign --verify --deep --strict --verbose=2 "$STAGE/NBN Cloud.app"
-        codesign -dv "$STAGE/NBN Cloud.app" 2>&1 | grep -E "Identifier|Signature|Format"
+        A="$STAGE/NBN Cloud.app"
+        # --deep sozinho regrava as extensões SEM os direitos (sandbox): a extensão do Finder e a de arquivos
+        # virtuais deixariam de carregar. Preserva os direitos e assina de novo a extensão File Provider com os dela.
+        codesign --force --deep --preserve-metadata=entitlements,requirements,flags --sign - "$A"
+        FP="$A/Contents/PlugIns/NBNCloudFileProviderExt.appex"
+        if [ -d "$FP" ]; then
+          codesign --force --sign - --entitlements "$GITHUB_WORKSPACE/shell_integration/MacOSX/NBNCloudFileProvider/Ext/FileProviderExt.entitlements" "$FP"
+          codesign --force --sign - --preserve-metadata=entitlements,requirements,flags "$A"
+          echo "extensão File Provider no app:"; defaults read "$FP/Contents/Info" CFBundleIdentifier
+          codesign -d --entitlements - "$FP" 2>/dev/null | grep -E "key|true" || true
+          otool -L "$FP/Contents/MacOS/NBNCloudFileProviderExt" | grep -i realm || true
+          ls "$A/Contents/Frameworks" | grep -i realm || echo "ATENÇÃO: RealmSwift.framework fora do app"
+        else
+          echo "ATENÇÃO: app sem a extensão File Provider (sem arquivos virtuais no macOS)"
+        fi
+        codesign -d --entitlements - "$A/Contents/PlugIns/FinderSyncExt.appex" 2>/dev/null | grep -E "key|true" || true
+        codesign --verify --deep --strict --verbose=2 "$A"
+        codesign -dv "$A" 2>&1 | grep -E "Identifier|Signature|Format"
         defaults read "$STAGE/NBN Cloud.app/Contents/Info" CFBundleIdentifier
         defaults read "$STAGE/NBN Cloud.app/Contents/Info" CFBundleShortVersionString
         ls "$STAGE/NBN Cloud.app/Contents/PlugIns" || true

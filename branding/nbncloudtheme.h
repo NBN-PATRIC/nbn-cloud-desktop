@@ -10,6 +10,7 @@
 #include "common/utility.h"
 #include "common/version.h"
 #include "common/vfs.h"
+#include "nbnmacfileprovider.h"
 #include "resources/resources.h"
 #include "theme.h"
 
@@ -50,7 +51,11 @@ public:
     // compilado do código aberto (src/plugins/vfs/win, relicenciado pela ownCloud em GPL-2.0-or-later em 2025).
     // Sem ele (macOS, Linux), o "melhor modo" viraria o de sufixo (.nbncloud), experimental, e as pastas novas de
     // Spaces no Infinite Scale nasceriam nele (accountsettings.cpp); por isso, sem CfApi, a opção some.
-    bool showVirtualFilesOption() const override { return VfsPluginManager::instance().isVfsPluginAvailable(Vfs::WindowsCfApi); }
+    // No macOS os arquivos virtuais vêm da extensão File Provider (nbnmacfileprovider.h), não de plugin de VFS.
+    bool showVirtualFilesOption() const override
+    {
+        return VfsPluginManager::instance().isVfsPluginAvailable(Vfs::WindowsCfApi) || nbnMacFileProviderAvailable();
+    }
 
     // Servidor sugerido: o que vier do instalador/GPO; sem nada, o NBN Cloud corporativo.
     QString suggestedServerUrl() const override

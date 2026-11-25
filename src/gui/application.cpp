@@ -31,6 +31,10 @@
 #include "socketapi/socketapi.h"
 #include "theme.h"
 
+#ifdef Q_OS_MACOS
+#include "macOS/nbnfileprovider_mac.h"
+#endif
+
 #ifdef WITH_AUTO_UPDATER
 #include "updater/ocupdater.h"
 #endif
@@ -97,6 +101,12 @@ Application::Application(Platform *platform, const QString &displayLanguage, boo
 
     connect(AccountManager::instance(), &AccountManager::accountAdded, this, &Application::slotAccountStateAdded);
     connect(AccountManager::instance(), &AccountManager::accountRemoved, this, &Application::slotAccountStateRemoved);
+#ifdef Q_OS_MACOS
+    // NBN Cloud: arquivos virtuais do macOS (extensão File Provider)
+    if (NbnFileProviderMac::isAvailable()) {
+        connect(AccountManager::instance(), &AccountManager::accountRemoved, NbnFileProviderMac::instance(), &NbnFileProviderMac::accountRemoved);
+    }
+#endif
     for (const auto &ai : AccountManager::instance()->accounts()) {
         slotAccountStateAdded(ai);
     }
@@ -134,6 +144,12 @@ void Application::slotAccountStateRemoved() const
 
 void Application::slotAccountStateAdded(AccountStatePtr accountState) const
 {
+#ifdef Q_OS_MACOS
+    // NBN Cloud: entrega a conta à extensão File Provider sempre que conectar (contas com arquivos virtuais)
+    if (NbnFileProviderMac::isAvailable()) {
+        NbnFileProviderMac::instance()->accountAdded(accountState);
+    }
+#endif
     // Hook up the GUI slots to the account state's Q_SIGNALS:
     connect(accountState.data(), &AccountState::stateChanged,
         _gui.data(), &ownCloudGui::slotAccountStateChanged);
