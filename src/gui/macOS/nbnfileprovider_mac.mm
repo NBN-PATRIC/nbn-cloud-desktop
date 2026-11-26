@@ -429,6 +429,14 @@ void NbnFileProviderMac::accountRemoved(const AccountStatePtr &accountState)
         return;
     }
     const QString dominioId = domainIdFor(accountState->account());
+    // AccountManager::shutdown (o app fechando) também emite accountRemoved, para cada conta. A remoção de verdade
+    // (deleteAccount) apaga a conta da configuração ANTES de emitir: conta ainda lá = só fechando, o domínio fica.
+    // Sem isto, fechar o app removia a pasta do Finder e a senha da extensão (visto no Mac Studio em 26/11).
+    auto contas = ConfigFile::settingsWithGroup(QStringLiteral("Accounts"));
+    if (contas->childGroups().contains(accountState->account()->id())) {
+        qCInfo(lcNbnFileProvider) << "App fechando: domínio mantido" << dominioId;
+        return;
+    }
     marcarConta(dominioId, false);
     if (!d->dominios.contains(dominioId)) {
         return;
