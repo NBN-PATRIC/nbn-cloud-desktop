@@ -10,6 +10,7 @@
 #include "account.h"
 #include "gui/accountmanager.h"
 #include "common/utility.h"
+#include "configfile.h"
 #include "libsync/creds/httpcredentials.h"
 #include "libsync/nbnmacfileprovider.h"
 
@@ -61,6 +62,27 @@ NSFileProviderDomain *domainFor(const OCC::AccountPtr &account)
 void naThreadPrincipal(void (^bloco)(void))
 {
     dispatch_async(dispatch_get_main_queue(), bloco);
+}
+
+// Contas com arquivos virtuais, guardadas na configuração do app. O macOS remove o domínio quando o app some do
+// disco (atualização arrastando por cima, reinstalação): com a marca, o app recria o domínio ao abrir.
+const QString grupoMarca = QStringLiteral("NbnFileProvider");
+
+bool contaMarcada(const QString &dominioId)
+{
+    auto s = OCC::ConfigFile::makeQSettings();
+    return s.value(grupoMarca + QLatin1Char('/') + dominioId, false).toBool();
+}
+
+void marcarConta(const QString &dominioId, bool marcada)
+{
+    auto s = OCC::ConfigFile::makeQSettings();
+    if (marcada) {
+        s.setValue(grupoMarca + QLatin1Char('/') + dominioId, true);
+    } else {
+        s.remove(grupoMarca + QLatin1Char('/') + dominioId);
+    }
+    s.sync();
 }
 
 } // namespace
@@ -136,6 +158,12 @@ void NbnFileProviderMac::loadDomains()
             eu->d->dominiosCarregados = true;
             qCInfo(lcNbnFileProvider) << "Domínios do File Provider:" << ids;
             for (const auto &conta : AccountManager::instance()->accounts()) {
+                const QString dominioId = domainIdFor(conta->account());
+                if (!ids.contains(dominioId) && contaMarcada(dominioId)) {
+                    qCInfo(lcNbnFileProvider) << "Domínio sumiu (app reinstalado ou atualizado), recriando:" << dominioId;
+                    eu->enableForAccount(conta);
+                    continue;
+                }
                 eu->configure(conta);
             }
         });
@@ -177,6 +205,7 @@ void NbnFileProviderMac::enableForAccount(const AccountStatePtr &accountState)
                 return;
             }
             qCInfo(lcNbnFileProvider) << "Domínio registrado" << dominioId;
+            marcarConta(dominioId, true);
             eu->d->dominios.insert(dominioId);
             eu->configure(conta);
             QTimer::singleShot(3s, eu, [eu, conta] {
@@ -369,6 +398,7 @@ void NbnFileProviderMac::accountRemoved(const AccountStatePtr &accountState)
         return;
     }
     const QString dominioId = domainIdFor(accountState->account());
+    marcarConta(dominioId, false);
     if (!d->dominios.contains(dominioId)) {
         return;
     }
