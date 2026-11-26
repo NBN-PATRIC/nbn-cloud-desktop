@@ -15,6 +15,7 @@
 #include "libsync/nbnmacfileprovider.h"
 
 #include <QDesktopServices>
+#include <QFile>
 #include <QLoggingCategory>
 #include <QMessageBox>
 #include <QPointer>
@@ -330,7 +331,25 @@ void NbnFileProviderMac::sendAccount(const AccountStatePtr &accountState)
                           serverUrl:servidor.toNSString()
                            password:credenciais->password().toNSString()
                           userAgent:QString::fromUtf8(Utility::userAgentString()).toNSString()];
-    qCInfo(lcNbnFileProvider) << "Conta entregue à extensão do domínio" << dominioId;
+    // sem a lista de ignorados o kit recusa criar, alterar e apagar ("não autenticado"): a do cliente
+    // (sync-exclude.lst do sistema e a do usuário), linha a linha; o kit entende o prefixo "]" e os comentários
+    NSMutableArray<NSString *> *ignorados = [NSMutableArray array];
+    for (const QString &arquivo : {ConfigFile::excludeFileFromSystem(), ConfigFile().excludeFile(ConfigFile::UserScope)}) {
+        QFile lista(arquivo);
+        if (!lista.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
+        }
+        while (!lista.atEnd()) {
+            const QString linha = QString::fromUtf8(lista.readLine()).trimmed();
+            if (!linha.isEmpty() && !linha.startsWith(QLatin1Char('#'))) {
+                [ignorados addObject:linha.toNSString()];
+            }
+        }
+    }
+    if (ignorados.count > 0) {
+        [proxy setIgnoreList:ignorados];
+    }
+    qCInfo(lcNbnFileProvider) << "Conta entregue à extensão do domínio" << dominioId << "com" << ignorados.count << "padrões ignorados";
 }
 
 void NbnFileProviderMac::connectionLost(const QString &domainId)

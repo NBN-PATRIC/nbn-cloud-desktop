@@ -10,6 +10,8 @@ Uso: python3 aplicar.py <pasta do NextcloudFileProviderKit>
    chaveiro quando recebe a conta, mas só a usa na instância que a recebeu. O macOS cria instâncias novas da extensão
    (às vezes no mesmo processo, sem derrubar a conexão XPC do app), que ficavam sem conta e respondiam "você precisa
    autenticar" (FP -1000) ao enviar arquivo. Agora cada instância nova restaura a conta guardada.
+3. Lista de ignorados padrão. Sem lista de arquivos ignorados (que o app manda por setIgnoreList) o kit recusa criar,
+   alterar e apagar com "não autenticado". A instância já nasce com uma lista padrão; a do app a substitui.
 """
 import pathlib
 import sys
@@ -44,6 +46,13 @@ depois2 = """        keychain = Keychain(domain: domain, log: log)
            let senha = keychain.getPassword(for: usuario) {
             logger.info("NBN Cloud: restaurando a conta guardada na instância nova.")
             setupDomainAccount(user: usuario, userId: usuarioId, serverUrl: servidor, password: senha)
+        }
+        // NBN Cloud: lista padrão de ignorados até o app mandar a dele (sem lista o kit recusa criar, alterar e apagar
+        // com "não autenticado")
+        if ignoredFiles == nil {
+            ignoredFiles = IgnoredFilesMatcher(ignoreList: ["*~", "~$*", ".~lock.*", "~*.tmp", "].DS_Store", "._*",
+                                                            "]Thumbs.db", ".*.sw?", "].TemporaryItems", "].Trashes",
+                                                            "*.part", "*.filepart", "*.crdownload"], log: log)
         }
     }"""
 if antes2 not in texto2:
