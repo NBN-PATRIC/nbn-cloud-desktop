@@ -284,6 +284,12 @@ void NbnFileProviderMac::sendAccount(const AccountStatePtr &accountState)
         qCWarning(lcNbnFileProvider) << "Conta com OAuth: arquivos virtuais do macOS ainda não suportam token" << dominioId;
         return;
     }
+    // o kit monta <servidor>/remote.php/dav/...: com a barra final do url() da conta sairia "//remote.php" e o
+    // servidor responderia uma página em vez do WebDAV ("Invalid data format")
+    QString servidor = account->url().toString();
+    while (servidor.endsWith(QLatin1Char('/'))) {
+        servidor.chop(1);
+    }
     id<ClientCommunicationProtocol> proxy = [retida.conexao remoteObjectProxyWithErrorHandler:^(NSError *error) {
         const QString erro = QString::fromNSString(error.localizedDescription);
         naThreadPrincipal(^{
@@ -292,7 +298,7 @@ void NbnFileProviderMac::sendAccount(const AccountStatePtr &accountState)
     }];
     [proxy configureAccountWithUser:credenciais->user().toNSString()
                              userId:account->davUser().toNSString()
-                          serverUrl:account->url().toString().toNSString()
+                          serverUrl:servidor.toNSString()
                            password:credenciais->password().toNSString()
                           userAgent:QString::fromUtf8(Utility::userAgentString()).toNSString()];
     qCInfo(lcNbnFileProvider) << "Conta entregue à extensão do domínio" << dominioId;
