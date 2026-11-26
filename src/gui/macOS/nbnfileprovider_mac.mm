@@ -20,6 +20,7 @@
 #include <QMessageBox>
 #include <QPointer>
 #include <QPushButton>
+#include <QSettings>
 #include <QTimer>
 #include <QUrl>
 
@@ -65,19 +66,30 @@ void naThreadPrincipal(void (^bloco)(void))
     dispatch_async(dispatch_get_main_queue(), bloco);
 }
 
-// Contas com arquivos virtuais, guardadas na configuração do app. O macOS remove o domínio quando o app some do
-// disco (atualização arrastando por cima, reinstalação): com a marca, o app recria o domínio ao abrir.
+// Contas com arquivos virtuais. O macOS remove o domínio quando o app some do disco (atualização arrastando por
+// cima, reinstalação): com a marca, o app recria o domínio ao abrir. Arquivo próprio ao lado da configuração: no
+// nbncloud.cfg o grupo sumia (o cliente regrava o arquivo; visto no Mac Studio em 26/11).
 const QString grupoMarca = QStringLiteral("NbnFileProvider");
+
+QSettings arquivoMarcas()
+{
+    return {OCC::ConfigFile::configPath() + QStringLiteral("nbn-fileprovider.ini"), QSettings::IniFormat};
+}
 
 bool contaMarcada(const QString &dominioId)
 {
-    auto s = OCC::ConfigFile::makeQSettings();
-    return s.value(grupoMarca + QLatin1Char('/') + dominioId, false).toBool();
+    auto s = arquivoMarcas();
+    if (s.value(grupoMarca + QLatin1Char('/') + dominioId, false).toBool()) {
+        return true;
+    }
+    // versões 6.0.3.9 e 6.0.3.10 gravavam no nbncloud.cfg
+    auto antigo = OCC::ConfigFile::makeQSettings();
+    return antigo.value(grupoMarca + QLatin1Char('/') + dominioId, false).toBool();
 }
 
 void marcarConta(const QString &dominioId, bool marcada)
 {
-    auto s = OCC::ConfigFile::makeQSettings();
+    auto s = arquivoMarcas();
     if (marcada) {
         s.setValue(grupoMarca + QLatin1Char('/') + dominioId, true);
     } else {
